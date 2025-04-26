@@ -6,37 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "@/components/ui/use-toast";
+import { useAuth } from "@/context/AuthContext";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const { login, loading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     
     try {
-      // This is a placeholder - in the future, this will connect to Supabase Auth
-      console.log("Logging in with:", { email, password, rememberMe });
-      
-      toast({
-        title: "Login Successful",
-        description: "Welcome back to the CEFR Test System!",
-      });
-      
-      // Redirect to dashboard (will be implemented with proper auth)
+      await login(email, password);
+      // Auth context handles navigation and toasts
     } catch (error) {
+      // Error handling is in the auth context
       console.error("Login error:", error);
-      toast({
-        title: "Login Failed",
-        description: "Please check your credentials and try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -86,8 +72,8 @@ const Login = () => {
               />
               <Label htmlFor="remember" className="text-sm font-normal">Remember me</Label>
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign In"}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
         </CardContent>
