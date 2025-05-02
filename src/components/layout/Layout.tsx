@@ -19,7 +19,7 @@ const Layout = () => {
         <Outlet />
       </main>
       <div className="fixed bottom-4 right-4 flex gap-2">
-        <LanguageSwitcher variant="secondary" />
+        <LanguageSwitcher variant="outline" />
         <Dialog open={openAIConfigOpen} onOpenChange={setOpenAIConfigOpen}>
           <DialogTrigger asChild>
             <Button variant="secondary" size="sm" className="flex items-center gap-2">

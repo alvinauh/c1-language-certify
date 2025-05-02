@@ -23,7 +23,7 @@ const languages: LanguageOption[] = [
   { code: 'ko', label: '한국어 (Korean)', flag: '🇰🇷' },
 ];
 
-const LanguageSwitcher: React.FC<{ variant?: 'default' | 'outline' | 'ghost' }> = ({ 
+const LanguageSwitcher: React.FC<{ variant?: 'default' | 'outline' | 'ghost' | 'secondary' }> = ({ 
   variant = 'outline' 
 }) => {
   const { language, setLanguage } = useLanguage();
