@@ -1,9 +1,7 @@
+
 import { toast } from "@/components/ui/use-toast";
 
-// In a real production app, this would be handled by Supabase Edge Functions
-// to keep the API key secure. For now, we'll simulate this behavior.
-
-// Rate limiting constants
+// Rate limiting constants (client-side rate limiting)
 const MAX_REQUESTS_PER_DAY = 50;
 const RATE_LIMIT_RESET_HOURS = 24;
 
@@ -42,23 +40,38 @@ const checkRateLimit = (): boolean => {
   return false;
 };
 
-interface OpenAIConfig {
-  apiKey: string;
-}
+// Two approaches for handling OpenAI API calls:
+// 1. Using backend proxy (recommended for production)
+// 2. Using direct API call with client-side API key (development/testing only)
+
+// Flag to determine if we're using the backend proxy
+let useBackendProxy = true;
 
 // This would be passed from a secure backend in production
-let config: OpenAIConfig | null = null;
+let clientSideApiKey: string | null = null;
 
-export const configureOpenAI = (apiKey: string) => {
-  config = { apiKey };
-  // In a real app, we might validate the API key here
-  localStorage.setItem('openai_configured', 'true');
+export const configureOpenAI = (apiKey: string | null, useProxy: boolean = true) => {
+  useBackendProxy = useProxy;
+  
+  if (!useProxy && apiKey) {
+    clientSideApiKey = apiKey;
+    localStorage.setItem('openai_configured', 'true');
+  } else if (useProxy) {
+    // When using proxy, we don't need the client-side API key
+    clientSideApiKey = null;
+    localStorage.setItem('openai_configured', 'true');
+  } else {
+    // No configuration
+    clientSideApiKey = null;
+    localStorage.removeItem('openai_configured');
+  }
 };
 
 export const isOpenAIConfigured = (): boolean => {
   return localStorage.getItem('openai_configured') === 'true';
 };
 
+// Main function to call OpenAI API (either through proxy or directly)
 export const callOpenAI = async (
   prompt: string, 
   options: { 
@@ -67,12 +80,7 @@ export const callOpenAI = async (
     temperature?: number;
   } = {}
 ): Promise<string> => {
-  // Check if API is configured
-  if (!config?.apiKey) {
-    throw new Error("OpenAI API is not configured");
-  }
-  
-  // Check rate limit
+  // Check rate limit first
   if (!checkRateLimit()) {
     const data = getRateLimitData();
     const resetTime = new Date(data.resetTime);
@@ -80,30 +88,13 @@ export const callOpenAI = async (
   }
   
   try {
-    // In production, this request would go to a Supabase Edge Function
-    // that safely handles the API key server-side
-    const response = await fetch('https://api.openai.com/v1/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.apiKey}`
-      },
-      body: JSON.stringify({
-        model: options.model || 'gpt-4o-mini',
-        prompt,
-        max_tokens: options.maxTokens || 1000,
-        temperature: options.temperature || 0.7
-      })
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Unknown error occurred');
+    if (useBackendProxy) {
+      // Use our backend proxy (Supabase Edge Function)
+      return await callOpenAIViaProxy(prompt, options);
+    } else {
+      // Direct API call (not recommended for production)
+      return await callOpenAIDirectly(prompt, options);
     }
-    
-    const data = await response.json();
-    return data.choices[0].text.trim();
-    
   } catch (error: any) {
     console.error('OpenAI API error:', error);
     toast({
@@ -113,6 +104,74 @@ export const callOpenAI = async (
     });
     throw error;
   }
+};
+
+// Backend proxy approach (Supabase Edge Function)
+const callOpenAIViaProxy = async (
+  prompt: string,
+  options: { 
+    model?: string;
+    maxTokens?: number;
+    temperature?: number;
+  }
+): Promise<string> => {
+  const response = await fetch('/api/openai', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      prompt,
+      model: options.model || 'gpt-4o-mini',
+      max_tokens: options.maxTokens || 1000,
+      temperature: options.temperature || 0.7
+    })
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Server responded with status ${response.status}`);
+  }
+  
+  const data = await response.json();
+  return data.text || data.completion || '';
+};
+
+// Direct API call approach (development/testing only)
+const callOpenAIDirectly = async (
+  prompt: string,
+  options: { 
+    model?: string;
+    maxTokens?: number;
+    temperature?: number;
+  }
+): Promise<string> => {
+  // Check if API is configured client-side
+  if (!clientSideApiKey) {
+    throw new Error("OpenAI API key is not configured");
+  }
+  
+  const response = await fetch('https://api.openai.com/v1/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${clientSideApiKey}`
+    },
+    body: JSON.stringify({
+      model: options.model || 'gpt-4o-mini',
+      prompt,
+      max_tokens: options.maxTokens || 1000,
+      temperature: options.temperature || 0.7
+    })
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || 'Unknown error occurred');
+  }
+  
+  const data = await response.json();
+  return data.choices[0].text.trim();
 };
 
 // Helper for generating tests based on CEFR level

@@ -1,0 +1,15 @@
+
+services:
+  - type: web
+    name: openai-proxy-server
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CLIENT_URL
+        sync: false
+      - key: PORT
+        value: 10000
+    autoDeploy: true

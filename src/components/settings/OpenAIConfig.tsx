@@ -5,15 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle, AlertTriangle } from "lucide-react";
+import { AlertCircle, CheckCircle, AlertTriangle, Server } from "lucide-react";
 import { configureOpenAI, isOpenAIConfigured } from "@/services/openai";
 import { toast } from "@/components/ui/use-toast";
+import { Switch } from "@/components/ui/switch";
 
 const OpenAIConfig = () => {
   const [apiKey, setApiKey] = useState("");
   const [configured, setConfigured] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [useProxy, setUseProxy] = useState(true);
 
   useEffect(() => {
     // Check if API is already configured
@@ -25,15 +27,17 @@ const OpenAIConfig = () => {
     setIsSubmitting(true);
 
     try {
-      if (!apiKey.startsWith("sk-")) {
+      if (!useProxy && (!apiKey || !apiKey.startsWith("sk-"))) {
         throw new Error("Invalid API key format");
       }
 
-      configureOpenAI(apiKey);
+      configureOpenAI(useProxy ? null : apiKey, useProxy);
       setConfigured(true);
       toast({
         title: "OpenAI API Configured",
-        description: "Your API key has been securely stored for this session."
+        description: useProxy 
+          ? "Using secure backend proxy for OpenAI calls."
+          : "Your API key has been securely stored for this session."
       });
       
       // Clear the input field for security
@@ -54,51 +58,70 @@ const OpenAIConfig = () => {
       <CardHeader>
         <CardTitle>OpenAI API Configuration</CardTitle>
         <CardDescription>
-          Configure your OpenAI API key to enable AI-powered test generation and assessment.
+          Configure OpenAI API access for AI-powered test generation and assessment.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {configured ? (
           <Alert className="bg-green-50 border-green-200">
             <CheckCircle className="h-5 w-5 text-green-600" />
-            <AlertTitle>API Key Configured</AlertTitle>
+            <AlertTitle>API Access Configured</AlertTitle>
             <AlertDescription>
-              Your OpenAI API key has been configured for this session.
+              {useProxy 
+                ? "Using secure backend proxy to access OpenAI."
+                : "Your OpenAI API key has been configured for this session."}
             </AlertDescription>
           </Alert>
         ) : (
           <>
             <Alert className="mb-4">
               <AlertCircle className="h-5 w-5" />
-              <AlertTitle>API Key Required</AlertTitle>
+              <AlertTitle>API Configuration Required</AlertTitle>
               <AlertDescription>
-                For security reasons, your OpenAI API key is stored only for the current browser session and is not persisted.
+                Choose whether to use the secure backend proxy or provide your own API key.
               </AlertDescription>
             </Alert>
             
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="apiKey">OpenAI API Key</Label>
-                <div className="flex">
-                  <Input
-                    id="apiKey"
-                    type={showKey ? "text" : "password"}
-                    placeholder="sk-..."
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    required
-                    className="flex-1"
-                  />
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setShowKey(!showKey)}
-                    className="ml-2"
-                  >
-                    {showKey ? "Hide" : "Show"}
-                  </Button>
+              <div className="flex items-center space-x-2 mb-6">
+                <Server className="h-5 w-5 text-primary" />
+                <div className="flex-1">
+                  <Label htmlFor="use-proxy" className="text-base font-medium">Use Secure Backend Proxy</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Recommended for production use. The API key is stored on the server.
+                  </p>
                 </div>
+                <Switch
+                  id="use-proxy"
+                  checked={useProxy}
+                  onCheckedChange={setUseProxy}
+                />
               </div>
+              
+              {!useProxy && (
+                <div className="space-y-2">
+                  <Label htmlFor="apiKey">OpenAI API Key</Label>
+                  <div className="flex">
+                    <Input
+                      id="apiKey"
+                      type={showKey ? "text" : "password"}
+                      placeholder="sk-..."
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      required={!useProxy}
+                      className="flex-1"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setShowKey(!showKey)}
+                      className="ml-2"
+                    >
+                      {showKey ? "Hide" : "Show"}
+                    </Button>
+                  </div>
+                </div>
+              )}
               
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? "Configuring..." : "Configure API"}
@@ -108,13 +131,25 @@ const OpenAIConfig = () => {
         )}
       </CardContent>
       <CardFooter>
-        <Alert variant="destructive" className="w-full">
-          <AlertTriangle className="h-5 w-5" />
-          <AlertTitle>Security Warning</AlertTitle>
-          <AlertDescription className="text-sm">
-            Never share your API key. In production, API keys should be handled server-side, not in the browser. 
-            Connect this app to Supabase for proper backend security.
-          </AlertDescription>
+        <Alert variant={useProxy ? "default" : "destructive"} className="w-full">
+          {useProxy ? (
+            <>
+              <Server className="h-5 w-5" />
+              <AlertTitle>Backend Proxy Enabled</AlertTitle>
+              <AlertDescription className="text-sm">
+                Using secure backend proxy. API key is stored as an environment variable on the server.
+              </AlertDescription>
+            </>
+          ) : (
+            <>
+              <AlertTriangle className="h-5 w-5" />
+              <AlertTitle>Security Warning</AlertTitle>
+              <AlertDescription className="text-sm">
+                Never share your API key. In production, API keys should be handled server-side, not in the browser. 
+                We recommend using the secure backend proxy option for production use.
+              </AlertDescription>
+            </>
+          )}
         </Alert>
       </CardFooter>
     </Card>
