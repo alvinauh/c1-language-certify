@@ -1,8 +1,8 @@
 
-import { Database as SupabaseDatabase } from '@/integrations/supabase/types';
+import { Database } from '@/integrations/supabase/types';
 
-// Extend the existing Supabase Database type
-export interface CustomDatabase extends SupabaseDatabase {
+// Define our custom database schema
+export interface CustomDatabase {
   public: {
     Tables: {
       tests: {

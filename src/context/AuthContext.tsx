@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { getUserProfile } from '@/services/supabaseService';
+import { Tables } from '@/types/database';
 
 interface User {
   id: string;
