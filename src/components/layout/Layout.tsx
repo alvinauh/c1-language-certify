@@ -7,6 +7,7 @@ import OpenAIConfig from "../settings/OpenAIConfig";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Cog } from "lucide-react";
+import LanguageSwitcher from "@/components/language/LanguageSwitcher";
 
 const Layout = () => {
   const [openAIConfigOpen, setOpenAIConfigOpen] = useState(false);
@@ -17,7 +18,8 @@ const Layout = () => {
       <main className="flex-grow">
         <Outlet />
       </main>
-      <div className="fixed bottom-4 right-4">
+      <div className="fixed bottom-4 right-4 flex gap-2">
+        <LanguageSwitcher variant="secondary" />
         <Dialog open={openAIConfigOpen} onOpenChange={setOpenAIConfigOpen}>
           <DialogTrigger asChild>
             <Button variant="secondary" size="sm" className="flex items-center gap-2">

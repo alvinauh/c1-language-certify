@@ -1,16 +1,18 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Book, Calculator, AtomIcon, Landmark } from "lucide-react";
+import { Book, Calculator, AtomIcon, Landmark, Globe } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface StudentDashboardProps {
-  subject?: 'english' | 'math' | 'science' | 'history' | 'bahasa' | 'notes';
+  subject?: 'english' | 'math' | 'science' | 'history' | 'bahasa' | 'mandarin' | 'notes';
 }
 
 const StudentDashboard = ({ subject = 'english' }: StudentDashboardProps) => {
+  const { t } = useLanguage();
+  
   // This is sample data - will be replaced with actual data from Supabase
   const skills = [
     { name: "Reading", level: "B2+", progress: 85, color: "bg-blue-500" },
@@ -46,6 +48,12 @@ const StudentDashboard = ({ subject = 'english' }: StudentDashboardProps) => {
       { name: "Grammar", level: "Advanced", progress: 85, color: "bg-yellow-500" },
       { name: "Vocabulary", level: "Advanced", progress: 90, color: "bg-red-500" },
     ],
+    mandarin: [
+      { name: "Reading", level: "Intermediate", progress: 65, color: "bg-blue-500" },
+      { name: "Writing", level: "Beginner", progress: 45, color: "bg-green-500" },
+      { name: "Speaking", level: "Intermediate", progress: 70, color: "bg-yellow-500" },
+      { name: "Listening", level: "Intermediate", progress: 75, color: "bg-red-500" },
+    ],
     notes: [
       { name: "Organization", level: "Advanced", progress: 95, color: "bg-blue-500" },
       { name: "Comprehension", level: "Advanced", progress: 90, color: "bg-green-500" },
@@ -77,13 +85,6 @@ const StudentDashboard = ({ subject = 'english' }: StudentDashboardProps) => {
         description: "Evaluate your listening comprehension of lectures and discussions",
         duration: 45,
         skillType: "listening",
-      },
-      {
-        id: 4,
-        title: "C1 Speaking Assessment",
-        description: "Record responses to demonstrate oral proficiency at C1 level",
-        duration: 30,
-        skillType: "speaking",
       },
     ],
     math: [
@@ -178,23 +179,46 @@ const StudentDashboard = ({ subject = 'english' }: StudentDashboardProps) => {
         skillType: "grammar",
       },
     ],
-    notes: [
+    mandarin: [
       {
         id: 501,
+        title: "Mandarin Reading Test",
+        description: "Test your ability to read and comprehend Mandarin texts",
+        duration: 60,
+        skillType: "reading",
+      },
+      {
+        id: 502,
+        title: "Mandarin Character Writing",
+        description: "Practice writing Mandarin characters correctly",
+        duration: 45,
+        skillType: "writing",
+      },
+      {
+        id: 503,
+        title: "Mandarin Listening Comprehension",
+        description: "Test your ability to understand spoken Mandarin",
+        duration: 30,
+        skillType: "listening",
+      },
+    ],
+    notes: [
+      {
+        id: 601,
         title: "Note-Taking Skills Assessment",
         description: "Evaluate your ability to take effective notes during lectures",
         duration: 45,
         skillType: "taking",
       },
       {
-        id: 502,
+        id: 602,
         title: "Note Organization Test",
         description: "Demonstrate your ability to organize study notes effectively",
         duration: 30,
         skillType: "organization",
       },
       {
-        id: 503,
+        id: 603,
         title: "Summarization Skills Quiz",
         description: "Test your ability to summarize complex information accurately",
         duration: 40,
@@ -285,16 +309,32 @@ const StudentDashboard = ({ subject = 'english' }: StudentDashboardProps) => {
         completedDate: "2023-03-18",
       },
     ],
-    notes: [
+    mandarin: [
       {
         id: 601,
+        testTitle: "Mandarin Vocabulary Test",
+        score: 62,
+        level: "Intermediate",
+        completedDate: "2023-04-05",
+      },
+      {
+        id: 602,
+        testTitle: "Basic Characters Assessment",
+        score: 55,
+        level: "Beginner",
+        completedDate: "2023-03-20",
+      },
+    ],
+    notes: [
+      {
+        id: 701,
         testTitle: "Note Organization Assessment",
         score: 95,
         level: "Advanced",
         completedDate: "2023-04-02",
       },
       {
-        id: 602,
+        id: 702,
         testTitle: "Summarization Skills Test",
         score: 85,
         level: "Advanced",
@@ -332,13 +372,14 @@ const StudentDashboard = ({ subject = 'english' }: StudentDashboardProps) => {
   // Get subject title and icon
   const getSubjectTitle = () => {
     switch(subject) {
-      case 'english': return { title: 'English', icon: <Book className="h-5 w-5 mr-2" /> };
-      case 'math': return { title: 'Mathematics', icon: <Calculator className="h-5 w-5 mr-2" /> };
-      case 'science': return { title: 'Science', icon: <AtomIcon className="h-5 w-5 mr-2" /> };
-      case 'history': return { title: 'History', icon: <Landmark className="h-5 w-5 mr-2" /> };
-      case 'bahasa': return { title: 'Bahasa Malaysia', icon: <Book className="h-5 w-5 mr-2" /> };
-      case 'notes': return { title: 'Study Notes', icon: <Book className="h-5 w-5 mr-2" /> };
-      default: return { title: 'English', icon: <Book className="h-5 w-5 mr-2" /> };
+      case 'english': return { title: t('english'), icon: <Book className="h-5 w-5 mr-2" /> };
+      case 'math': return { title: t('mathematics'), icon: <Calculator className="h-5 w-5 mr-2" /> };
+      case 'science': return { title: t('science'), icon: <AtomIcon className="h-5 w-5 mr-2" /> };
+      case 'history': return { title: t('history'), icon: <Landmark className="h-5 w-5 mr-2" /> };
+      case 'bahasa': return { title: t('bahasa'), icon: <Book className="h-5 w-5 mr-2" /> };
+      case 'mandarin': return { title: t('mandarin'), icon: <Globe className="h-5 w-5 mr-2" /> };
+      case 'notes': return { title: t('notes'), icon: <Book className="h-5 w-5 mr-2" /> };
+      default: return { title: t('english'), icon: <Book className="h-5 w-5 mr-2" /> };
     }
   };
 
@@ -411,22 +452,22 @@ const StudentDashboard = ({ subject = 'english' }: StudentDashboardProps) => {
         <div className="flex items-center">
           {subjectInfo.icon}
           <div>
-            <h1 className="text-3xl font-bold">{subjectInfo.title} Dashboard</h1>
+            <h1 className="text-3xl font-bold">{subjectInfo.title} {t('dashboard')}</h1>
             <p className="text-muted-foreground">
               {subject === 'english' 
-                ? "Track your progress towards C1 certification" 
-                : `Track your progress in ${subjectInfo.title}`}
+                ? t('track_progress')
+                : `${t('track_progress_in')} ${subjectInfo.title}`}
             </p>
           </div>
         </div>
-        <Button className="mt-4 md:mt-0">Take Assessment Test</Button>
+        <Button className="mt-4 md:mt-0">{t('take_assessment')}</Button>
       </div>
 
       {/* Progress Section */}
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>Your {subject === 'english' ? 'CEFR Level' : 'Skill Level'} Progress</CardTitle>
-          <CardDescription>Your current standing across {subject} skills</CardDescription>
+          <CardTitle>{subject === 'english' ? t('your_cefr_level') : t('your_skill_level')}</CardTitle>
+          <CardDescription>{t('your_standing')} {subject} {t('skills')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
@@ -441,8 +482,8 @@ const StudentDashboard = ({ subject = 'english' }: StudentDashboardProps) => {
                   </div>
                   <span className="text-sm text-muted-foreground">
                     {subject === 'english' 
-                      ? `${skill.progress}% to C1` 
-                      : `${skill.progress}% proficiency`}
+                      ? `${skill.progress}% ${t('to_c1')}` 
+                      : `${skill.progress}% ${t('proficiency')}`}
                   </span>
                 </div>
                 <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
@@ -460,9 +501,9 @@ const StudentDashboard = ({ subject = 'english' }: StudentDashboardProps) => {
       {/* Main Content Tabs */}
       <Tabs defaultValue="available-tests" className="mt-8">
         <TabsList className="grid grid-cols-3 mb-8">
-          <TabsTrigger value="available-tests">Available Tests</TabsTrigger>
-          <TabsTrigger value="recent-results">Recent Results</TabsTrigger>
-          <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+          <TabsTrigger value="available-tests">{t('available_tests')}</TabsTrigger>
+          <TabsTrigger value="recent-results">{t('recent_results')}</TabsTrigger>
+          <TabsTrigger value="recommendations">{t('recommendations')}</TabsTrigger>
         </TabsList>
         
         {/* Available Tests Tab */}
@@ -485,12 +526,12 @@ const StudentDashboard = ({ subject = 'english' }: StudentDashboardProps) => {
                       <circle cx="12" cy="12" r="10"></circle>
                       <polyline points="12 6 12 12 16 14"></polyline>
                     </svg>
-                    <span>{test.duration} minutes</span>
+                    <span>{test.duration} {t('minutes')}</span>
                   </div>
                 </CardContent>
                 <CardFooter>
                   <Link to={`/test/${test.id}`} className="w-full">
-                    <Button className="w-full">Start Test</Button>
+                    <Button className="w-full">{t('start_test')}</Button>
                   </Link>
                 </CardFooter>
               </Card>
@@ -505,7 +546,7 @@ const StudentDashboard = ({ subject = 'english' }: StudentDashboardProps) => {
               <Card key={result.id}>
                 <CardHeader>
                   <CardTitle className="text-lg">{result.testTitle}</CardTitle>
-                  <CardDescription>Completed on {result.completedDate}</CardDescription>
+                  <CardDescription>{t('completed_on')} {result.completedDate}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex justify-between items-center mb-4">
@@ -518,7 +559,7 @@ const StudentDashboard = ({ subject = 'english' }: StudentDashboardProps) => {
                 </CardContent>
                 <CardFooter>
                   <Link to={`/results/${result.id}`} className="w-full">
-                    <Button variant="outline" className="w-full">View Details</Button>
+                    <Button variant="outline" className="w-full">{t('view_details')}</Button>
                   </Link>
                 </CardFooter>
               </Card>
@@ -542,7 +583,7 @@ const StudentDashboard = ({ subject = 'english' }: StudentDashboardProps) => {
                   <p className="text-muted-foreground">{rec.description}</p>
                 </CardContent>
                 <CardFooter>
-                  <Button variant="outline" className="w-full">View Resources</Button>
+                  <Button variant="outline" className="w-full">{t('view_resources')}</Button>
                 </CardFooter>
               </Card>
             ))}

@@ -13,10 +13,12 @@ import {
   SidebarFooter,
   SidebarInput,
 } from '@/components/ui/sidebar';
-import { Book, Calculator, AtomIcon, Landmark, LayoutDashboard } from 'lucide-react';
+import { Book, Calculator, AtomIcon, Landmark, LayoutDashboard, Globe } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 const DashboardSidebar = () => {
   const location = useLocation();
+  const { t } = useLanguage();
 
   // Check if a path is active
   const isActive = (path: string) => {
@@ -24,13 +26,14 @@ const DashboardSidebar = () => {
   };
 
   const subjects = [
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'English', path: '/dashboard/english', icon: Book },
-    { name: 'Mathematics', path: '/dashboard/math', icon: Calculator },
-    { name: 'Science', path: '/dashboard/science', icon: AtomIcon },
-    { name: 'History', path: '/dashboard/history', icon: Landmark },
-    { name: 'Bahasa Malaysia', path: '/dashboard/bahasa', icon: Book },
-    { name: 'Study Notes', path: '/dashboard/notes', icon: Book },
+    { name: t('dashboard'), path: '/dashboard', icon: LayoutDashboard },
+    { name: t('english'), path: '/dashboard/english', icon: Book },
+    { name: t('mathematics'), path: '/dashboard/math', icon: Calculator },
+    { name: t('science'), path: '/dashboard/science', icon: AtomIcon },
+    { name: t('history'), path: '/dashboard/history', icon: Landmark },
+    { name: t('bahasa'), path: '/dashboard/bahasa', icon: Book },
+    { name: t('mandarin'), path: '/dashboard/mandarin', icon: Globe },
+    { name: t('notes'), path: '/dashboard/notes', icon: Book },
   ];
 
   return (
@@ -49,7 +52,7 @@ const DashboardSidebar = () => {
       
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Subjects</SidebarGroupLabel>
+          <SidebarGroupLabel>{t('subjects')}</SidebarGroupLabel>
           <SidebarMenu>
             {subjects.map((subject) => (
               <SidebarMenuItem key={subject.path}>
