@@ -12,7 +12,8 @@ export interface CustomDatabase {
           description: string;
           duration: number;
           created_at: string;
-          cefr_level: string;
+          level: string;
+          level_type: 'cefr' | 'igcse' | 'uasa' | 'spm';
           skill: 'reading' | 'writing' | 'listening' | 'speaking';
           questions: any;
           user_id?: string;

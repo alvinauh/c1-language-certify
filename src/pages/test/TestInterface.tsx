@@ -213,7 +213,8 @@ const TestInterface = () => {
     try {
       // Generate AI feedback based on answers
       const feedback = await generateFeedback(
-        test.cefr_level,
+        test.level,
+        test.level_type,
         answers,
         test.questions
       );
@@ -262,6 +263,19 @@ const TestInterface = () => {
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
   
+  // Get appropriate label for level type
+  const getLevelTypeLabel = () => {
+    if (!test) return '';
+    
+    switch (test.level_type) {
+      case 'cefr': return 'CEFR';
+      case 'igcse': return 'IGCSE';
+      case 'uasa': return 'UASA';
+      case 'spm': return 'SPM';
+      default: return '';
+    }
+  };
+  
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Test Header */}
@@ -269,6 +283,9 @@ const TestInterface = () => {
         <div>
           <h1 className="text-3xl font-bold">{test.title}</h1>
           <p className="text-muted-foreground">{test.description}</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {getLevelTypeLabel()} {test.level} • {test.subject.charAt(0).toUpperCase() + test.subject.slice(1)} • {test.skill.charAt(0).toUpperCase() + test.skill.slice(1)}
+          </p>
         </div>
         <div className="mt-4 md:mt-0 flex items-center">
           <div className="bg-muted p-2 rounded-md text-center">

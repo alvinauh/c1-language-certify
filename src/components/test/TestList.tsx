@@ -13,11 +13,12 @@ import TestGenerator from "./TestGenerator";
 interface TestListProps {
   subject: string;
   skill: 'reading' | 'writing' | 'listening' | 'speaking';
-  cefrLevel: string;
+  level: string;
+  levelType: 'cefr' | 'igcse' | 'uasa' | 'spm';
   userId?: string;
 }
 
-const TestList = ({ subject, skill, cefrLevel, userId }: TestListProps) => {
+const TestList = ({ subject, skill, level, levelType, userId }: TestListProps) => {
   const [tests, setTests] = useState<Tables<'tests'>[]>([]);
   const [loading, setLoading] = useState(true);
   const [allCompleted, setAllCompleted] = useState(false);
@@ -29,10 +30,15 @@ const TestList = ({ subject, skill, cefrLevel, userId }: TestListProps) => {
       setError(null);
       try {
         const testsData = await fetchTests(subject);
-        setTests(testsData.filter(test => test.skill === skill));
+        // Filter by both skill and level
+        setTests(testsData.filter(test => 
+          test.skill === skill && 
+          test.level === level &&
+          test.level_type === levelType
+        ));
         
         if (userId) {
-          const completed = await hasCompletedAllTests(userId, subject, skill);
+          const completed = await hasCompletedAllTests(userId, subject, skill, level, levelType);
           setAllCompleted(completed);
         }
       } catch (error: any) {
@@ -52,7 +58,7 @@ const TestList = ({ subject, skill, cefrLevel, userId }: TestListProps) => {
     };
     
     loadTests();
-  }, [subject, skill, userId]);
+  }, [subject, skill, level, levelType, userId]);
 
   const handleNoTestsAvailable = async () => {
     if (!userId) {
@@ -67,7 +73,7 @@ const TestList = ({ subject, skill, cefrLevel, userId }: TestListProps) => {
     setLoading(true);
     setError(null);
     try {
-      const newTest = await generateTest(cefrLevel, skill, subject as any, 5, userId);
+      const newTest = await generateTest(level, levelType, skill, subject as any, 5, userId);
       setTests(prev => [newTest, ...prev]);
       toast({
         title: "Test Generated",
@@ -115,7 +121,7 @@ const TestList = ({ subject, skill, cefrLevel, userId }: TestListProps) => {
         <CardHeader>
           <CardTitle>No Tests Available</CardTitle>
           <CardDescription>
-            There are no {cefrLevel} {subject} {skill} tests available yet.
+            There are no {level} {subject} {skill} tests available yet.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -157,7 +163,8 @@ const TestList = ({ subject, skill, cefrLevel, userId }: TestListProps) => {
         {/* Show the test generator if all tests have been completed */}
         {allCompleted && userId && (
           <TestGenerator 
-            cefrLevel={cefrLevel} 
+            level={level}
+            levelType={levelType}
             skill={skill} 
             subject={subject as any} 
             userId={userId} 

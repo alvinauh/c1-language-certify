@@ -25,14 +25,22 @@ export const fetchTests = async (subject?: string, userId?: string) => {
 };
 
 // Check if user has completed all available tests for a given subject and skill
-export const hasCompletedAllTests = async (userId: string, subject: string, skill: string) => {
+export const hasCompletedAllTests = async (
+  userId: string, 
+  subject: string, 
+  skill: string, 
+  level: string,
+  levelType: 'cefr' | 'igcse' | 'uasa' | 'spm'
+) => {
   try {
-    // First get all tests for this subject and skill
+    // First get all tests for this subject, skill, level and level type
     const { data: tests } = await supabase
       .from('tests')
       .select('id')
       .eq('subject', subject)
-      .eq('skill', skill);
+      .eq('skill', skill)
+      .eq('level', level)
+      .eq('level_type', levelType);
       
     if (!tests || tests.length === 0) {
       return true; // No tests available means we need to generate one
@@ -63,15 +71,31 @@ export const hasCompletedAllTests = async (userId: string, subject: string, skil
 };
 
 // Get the next available test that the user hasn't attempted
-export const getNextAvailableTest = async (userId: string, subject: string, skill: string) => {
+export const getNextAvailableTest = async (
+  userId: string, 
+  subject: string, 
+  skill: string,
+  level?: string,
+  levelType?: 'cefr' | 'igcse' | 'uasa' | 'spm'
+) => {
   try {
     // Get all tests for this subject and skill
-    const { data: tests } = await supabase
+    let query = supabase
       .from('tests')
       .select('*')
       .eq('subject', subject)
-      .eq('skill', skill)
-      .order('created_at', { ascending: true });
+      .eq('skill', skill);
+      
+    // Add level and levelType filters if provided
+    if (level) {
+      query = query.eq('level', level);
+    }
+    
+    if (levelType) {
+      query = query.eq('level_type', levelType);
+    }
+    
+    const { data: tests } = await query.order('created_at', { ascending: true });
       
     if (!tests || tests.length === 0) {
       return null; // No tests available

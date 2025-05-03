@@ -1,7 +1,8 @@
+
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { Tables, InsertTables } from '@/types/database';
-import { saveTest as saveTestToSupabase } from './supabaseService';
+import { saveTest as saveTestToSupabase, getNextAvailableTest } from './supabaseService';
 
 // Rate limiting constants (client-side rate limiting)
 const MAX_REQUESTS_PER_DAY = 50;
@@ -182,9 +183,10 @@ const callOpenAIDirectly = async (
 // Cache generated tests in memory to avoid regenerating the same tests
 const testCache: Record<string, any> = {};
 
-// Helper for generating tests based on CEFR level
+// Helper for generating tests based on level type
 export const generateTest = async (
-  cefrLevel: string,
+  level: string,
+  levelType: 'cefr' | 'igcse' | 'uasa' | 'spm', 
   skill: 'reading' | 'writing' | 'listening' | 'speaking',
   subject: 'english' | 'math' | 'science' | 'history' | 'bahasa',
   numQuestions: number = 5,
@@ -192,13 +194,13 @@ export const generateTest = async (
   forceNewGeneration: boolean = false
 ): Promise<Tables<'tests'>> => {
   // Create a cache key for this test configuration
-  const cacheKey = `${cefrLevel}_${skill}_${subject}_${numQuestions}`;
+  const cacheKey = `${level}_${levelType}_${skill}_${subject}_${numQuestions}`;
   
   try {
     // If not forcing new generation, check if a similar test already exists in Supabase
     // that the user hasn't attempted yet
     if (!forceNewGeneration && userId) {
-      const nextAvailableTest = await getNextAvailableTest(userId, subject, skill);
+      const nextAvailableTest = await getNextAvailableTest(userId, subject, skill, level, levelType);
       if (nextAvailableTest) {
         console.log('Using next available test from database');
         return nextAvailableTest;
@@ -214,7 +216,19 @@ export const generateTest = async (
     }
     
     // If not found, generate a new test
-    const prompt = `Create a ${cefrLevel} level language ${skill} test for ${subject} with ${numQuestions} questions following CEFR guidelines. 
+    let prompt = '';
+    
+    if (levelType === 'cefr') {
+      prompt = `Create a ${level} level language ${skill} test for ${subject} with ${numQuestions} questions following CEFR guidelines.`;
+    } else if (levelType === 'igcse') {
+      prompt = `Create an IGCSE ${level} ${subject} ${skill} test with ${numQuestions} questions following IGCSE curriculum standards.`;
+    } else if (levelType === 'uasa') {
+      prompt = `Create a UASA ${level} ${subject} ${skill} test with ${numQuestions} questions following Malaysian UASA curriculum standards.`;
+    } else if (levelType === 'spm') {
+      prompt = `Create an SPM ${level} ${subject} ${skill} test with ${numQuestions} questions following Malaysian SPM standards.`;
+    }
+    
+    prompt += `
     Format the response as a valid JSON object with the following structure:
     {
       "title": "Title of the test",
@@ -246,7 +260,8 @@ export const generateTest = async (
       title: testData.title,
       description: testData.description,
       duration: testData.duration,
-      cefr_level: cefrLevel,
+      level: level,
+      level_type: levelType,
       skill: skill,
       questions: testData.questions,
       subject: subject,
@@ -267,7 +282,8 @@ export const generateTest = async (
 };
 
 export const generateFeedback = async (
-  cefrLevel: string,
+  level: string,
+  levelType: 'cefr' | 'igcse' | 'uasa' | 'spm',
   answers: Record<number, any>,
   questions: any[]
 ): Promise<string> => {
@@ -283,12 +299,23 @@ export const generateFeedback = async (
     }\n\n`;
   });
   
-  const prompt = `You are a ${cefrLevel} CEFR language proficiency assessor. 
-  Evaluate the following student responses and provide detailed feedback according to CEFR standards.
+  let prompt = '';
+  if (levelType === 'cefr') {
+    prompt = `You are a ${level} CEFR language proficiency assessor.`;
+  } else if (levelType === 'igcse') {
+    prompt = `You are an IGCSE ${level} examiner.`;
+  } else if (levelType === 'uasa') {
+    prompt = `You are a UASA ${level} assessor following Malaysian education standards.`;
+  } else if (levelType === 'spm') {
+    prompt = `You are an SPM ${level} examiner following Malaysian SPM standards.`;
+  }
+  
+  prompt += `
+  Evaluate the following student responses and provide detailed feedback according to ${levelType.toUpperCase()} standards.
   
   ${answersText}
   
-  Provide constructive feedback on the student's language abilities at the ${cefrLevel} level.
+  Provide constructive feedback on the student's abilities at the ${level} level.
   Include strengths, areas for improvement, and suggestions for further practice.`;
   
   return await callOpenAI(prompt, {
@@ -297,5 +324,5 @@ export const generateFeedback = async (
   });
 };
 
-// Add this new function to import the needed functions
-import { saveTest, getNextAvailableTest } from './supabaseService';
+// Export the saveTest function
+export const saveTest = saveTestToSupabase;

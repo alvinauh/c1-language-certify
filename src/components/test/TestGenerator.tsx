@@ -8,13 +8,14 @@ import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 
 interface TestGeneratorProps {
-  cefrLevel: string;
+  level: string;
+  levelType: 'cefr' | 'igcse' | 'uasa' | 'spm';
   skill: 'reading' | 'writing' | 'listening' | 'speaking';
   subject: 'english' | 'math' | 'science' | 'history' | 'bahasa';
   userId?: string;
 }
 
-const TestGenerator = ({ cefrLevel, skill, subject, userId }: TestGeneratorProps) => {
+const TestGenerator = ({ level, levelType, skill, subject, userId }: TestGeneratorProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const navigate = useNavigate();
 
@@ -30,7 +31,7 @@ const TestGenerator = ({ cefrLevel, skill, subject, userId }: TestGeneratorProps
 
     setIsGenerating(true);
     try {
-      const test = await generateTest(cefrLevel, skill, subject, 5, userId, true);
+      const test = await generateTest(level, levelType, skill, subject, 5, userId, true);
       toast({
         title: "Test Generated",
         description: "Your new test is ready to take",
@@ -48,12 +49,22 @@ const TestGenerator = ({ cefrLevel, skill, subject, userId }: TestGeneratorProps
     }
   };
 
+  const getLevelTypeLabel = () => {
+    switch (levelType) {
+      case 'cefr': return 'CEFR';
+      case 'igcse': return 'IGCSE';
+      case 'uasa': return 'UASA';
+      case 'spm': return 'SPM';
+      default: return '';
+    }
+  };
+
   return (
     <Card className="shadow-md hover:shadow-lg transition-shadow">
       <CardHeader>
         <CardTitle>Generate New Test</CardTitle>
         <CardDescription>
-          Create a fresh {cefrLevel} level {subject} test for {skill}
+          Create a fresh {getLevelTypeLabel()} {level} level {subject} test for {skill}
         </CardDescription>
       </CardHeader>
       <CardContent>
