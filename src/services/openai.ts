@@ -1,5 +1,8 @@
 
 import { toast } from "@/components/ui/use-toast";
+import { supabase } from '@/integrations/supabase/client';
+import { Tables, InsertTables } from '@/types/database';
+import { saveTest as saveTestToSupabase } from './supabaseService';
 
 // Rate limiting constants (client-side rate limiting)
 const MAX_REQUESTS_PER_DAY = 50;
@@ -106,7 +109,7 @@ export const callOpenAI = async (
   }
 };
 
-// Backend proxy approach (Supabase Edge Function)
+// Backend proxy approach
 const callOpenAIViaProxy = async (
   prompt: string,
   options: { 
@@ -115,7 +118,10 @@ const callOpenAIViaProxy = async (
     temperature?: number;
   }
 ): Promise<string> => {
-  const response = await fetch('/api/openai', {
+  // Get the backend URL, either from environment or hardcoded for deployed version
+  const backendUrl = process.env.BACKEND_URL || 'https://openai-proxy-server.onrender.com';
+  
+  const response = await fetch(`${backendUrl}/api/openai`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -134,7 +140,7 @@ const callOpenAIViaProxy = async (
   }
   
   const data = await response.json();
-  return data.text || data.completion || '';
+  return data.completion || '';
 };
 
 // Direct API call approach (development/testing only)
@@ -174,40 +180,91 @@ const callOpenAIDirectly = async (
   return data.choices[0].text.trim();
 };
 
+// Cache generated tests in memory to avoid regenerating the same tests
+const testCache: Record<string, any> = {};
+
 // Helper for generating tests based on CEFR level
 export const generateTest = async (
   cefrLevel: string,
   skill: 'reading' | 'writing' | 'listening' | 'speaking',
-  numQuestions: number = 5
-): Promise<any> => {
-  const prompt = `Create a ${cefrLevel} level language ${skill} test with ${numQuestions} questions following CEFR guidelines. 
-  Format the response as a valid JSON object with the following structure:
-  {
-    "title": "Title of the test",
-    "description": "Brief description of the test",
-    "duration": duration in minutes,
-    "questions": [
-      {
-        "id": 1,
-        "questionText": "The full text of the question",
-        "questionType": "multiple-choice" or "essay" or "audio-response",
-        "options": ["option1", "option2", "option3", "option4"] (for multiple-choice only),
-        "correctAnswer": index of correct option (for multiple-choice only),
-        "audioUrl": "url" (for listening questions only)
-      }
-    ]
-  }`;
-  
-  const response = await callOpenAI(prompt, {
-    maxTokens: 2000,
-    temperature: 0.7
-  });
+  subject: 'english' | 'math' | 'science' | 'history' | 'bahasa',
+  numQuestions: number = 5,
+  userId?: string
+): Promise<Tables<'tests'>> => {
+  // Create a cache key for this test configuration
+  const cacheKey = `${cefrLevel}_${skill}_${subject}_${numQuestions}`;
   
   try {
-    return JSON.parse(response);
+    // First check if a similar test already exists in Supabase
+    const { data: existingTests } = await supabase
+      .from('tests')
+      .select('*')
+      .eq('cefr_level', cefrLevel)
+      .eq('skill', skill)
+      .eq('subject', subject)
+      .limit(1);
+    
+    if (existingTests && existingTests.length > 0) {
+      console.log('Using existing test from database');
+      return existingTests[0] as Tables<'tests'>;
+    }
+    
+    // Check memory cache next
+    if (testCache[cacheKey]) {
+      console.log('Using cached test');
+      return testCache[cacheKey];
+    }
+    
+    // If not found, generate a new test
+    const prompt = `Create a ${cefrLevel} level language ${skill} test for ${subject} with ${numQuestions} questions following CEFR guidelines. 
+    Format the response as a valid JSON object with the following structure:
+    {
+      "title": "Title of the test",
+      "description": "Brief description of the test",
+      "duration": duration in minutes,
+      "questions": [
+        {
+          "id": 1,
+          "questionText": "The full text of the question",
+          "questionType": "multiple-choice" or "essay" or "audio-response",
+          "options": ["option1", "option2", "option3", "option4"] (for multiple-choice only),
+          "correctAnswer": index of correct option (for multiple-choice only),
+          "audioUrl": "url" (for listening questions only)
+        }
+      ]
+    }`;
+    
+    console.log('Generating new test with AI');
+    const response = await callOpenAI(prompt, {
+      maxTokens: 2000,
+      temperature: 0.7
+    });
+    
+    // Parse the AI response
+    const testData = JSON.parse(response);
+    
+    // Format for Supabase storage
+    const testToSave: InsertTables<'tests'> = {
+      title: testData.title,
+      description: testData.description,
+      duration: testData.duration,
+      cefr_level: cefrLevel,
+      skill: skill,
+      questions: testData.questions,
+      subject: subject,
+      user_id: userId
+    };
+    
+    // Save to Supabase
+    const savedTest = await saveTestToSupabase(testToSave);
+    
+    // Cache the test
+    testCache[cacheKey] = savedTest;
+    
+    return savedTest;
   } catch (e) {
-    console.error("Failed to parse AI response", e);
-    throw new Error("Failed to generate a valid test format");
+    console.error("Failed to generate or parse test", e);
+    throw new Error("Failed to generate a valid test");
   }
 };
 
