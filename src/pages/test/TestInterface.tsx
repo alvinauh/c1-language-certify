@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -27,15 +28,17 @@ const TestInterface = () => {
     queryFn: () => testId ? getTestById(testId) : Promise.reject('No test ID provided'),
     enabled: !!testId,
     retry: 1, // Only retry once to avoid too many failed requests
-    onError: (error: any) => {
-      console.error("Error fetching test:", error);
-      // Show toast for database table issues
-      if (error.message?.includes("relation") && error.message?.includes("does not exist")) {
-        toast({
-          title: "Database Error",
-          description: "The tests database has not been initialized yet. Please generate tests first.",
-          variant: "destructive",
-        });
+    meta: {
+      onError: (error: any) => {
+        console.error("Error fetching test:", error);
+        // Show toast for database table issues
+        if (error.message?.includes("relation") && error.message?.includes("does not exist")) {
+          toast({
+            title: "Database Error",
+            description: "The tests database has not been initialized yet. Please generate tests first.",
+            variant: "destructive",
+          });
+        }
       }
     }
   });
