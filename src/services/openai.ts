@@ -1,4 +1,3 @@
-
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { Tables, InsertTables } from '@/types/database';
@@ -189,28 +188,27 @@ export const generateTest = async (
   skill: 'reading' | 'writing' | 'listening' | 'speaking',
   subject: 'english' | 'math' | 'science' | 'history' | 'bahasa',
   numQuestions: number = 5,
-  userId?: string
+  userId?: string,
+  forceNewGeneration: boolean = false
 ): Promise<Tables<'tests'>> => {
   // Create a cache key for this test configuration
   const cacheKey = `${cefrLevel}_${skill}_${subject}_${numQuestions}`;
   
   try {
-    // First check if a similar test already exists in Supabase
-    const { data: existingTests } = await supabase
-      .from('tests')
-      .select('*')
-      .eq('cefr_level', cefrLevel)
-      .eq('skill', skill)
-      .eq('subject', subject)
-      .limit(1);
-    
-    if (existingTests && existingTests.length > 0) {
-      console.log('Using existing test from database');
-      return existingTests[0] as Tables<'tests'>;
+    // If not forcing new generation, check if a similar test already exists in Supabase
+    // that the user hasn't attempted yet
+    if (!forceNewGeneration && userId) {
+      const nextAvailableTest = await getNextAvailableTest(userId, subject, skill);
+      if (nextAvailableTest) {
+        console.log('Using next available test from database');
+        return nextAvailableTest;
+      }
     }
     
-    // Check memory cache next
-    if (testCache[cacheKey]) {
+    // If forcing generation or all tests have been attempted, create a new test
+    
+    // Check memory cache next if not forcing new generation
+    if (!forceNewGeneration && testCache[cacheKey]) {
       console.log('Using cached test');
       return testCache[cacheKey];
     }
@@ -256,7 +254,7 @@ export const generateTest = async (
     };
     
     // Save to Supabase
-    const savedTest = await saveTestToSupabase(testToSave);
+    const savedTest = await saveTest(testToSave);
     
     // Cache the test
     testCache[cacheKey] = savedTest;
@@ -298,3 +296,6 @@ export const generateFeedback = async (
     temperature: 0.7
   });
 };
+
+// Add this new function to import the needed functions
+import { saveTest, getNextAvailableTest } from './supabaseService';

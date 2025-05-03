@@ -24,6 +24,77 @@ export const fetchTests = async (subject?: string, userId?: string) => {
   return data as Tables<'tests'>[];
 };
 
+// Check if user has completed all available tests for a given subject and skill
+export const hasCompletedAllTests = async (userId: string, subject: string, skill: string) => {
+  try {
+    // First get all tests for this subject and skill
+    const { data: tests } = await supabase
+      .from('tests')
+      .select('id')
+      .eq('subject', subject)
+      .eq('skill', skill);
+      
+    if (!tests || tests.length === 0) {
+      return true; // No tests available means we need to generate one
+    }
+    
+    // Now get all completed attempts for this user
+    const { data: attempts } = await supabase
+      .from('test_attempts')
+      .select('test_id')
+      .eq('user_id', userId)
+      .not('completed_at', 'is', null);
+      
+    if (!attempts || attempts.length === 0) {
+      return false; // User hasn't completed any tests
+    }
+    
+    // Check if all test IDs are in the completed attempts
+    const completedTestIds = attempts.map(attempt => attempt.test_id);
+    const allTestsCompleted = tests.every(test => 
+      completedTestIds.includes(test.id)
+    );
+    
+    return allTestsCompleted;
+  } catch (error) {
+    console.error('Error checking completed tests:', error);
+    return false; // Assume not all completed on error
+  }
+};
+
+// Get the next available test that the user hasn't attempted
+export const getNextAvailableTest = async (userId: string, subject: string, skill: string) => {
+  try {
+    // Get all tests for this subject and skill
+    const { data: tests } = await supabase
+      .from('tests')
+      .select('*')
+      .eq('subject', subject)
+      .eq('skill', skill)
+      .order('created_at', { ascending: true });
+      
+    if (!tests || tests.length === 0) {
+      return null; // No tests available
+    }
+    
+    // Get all test attempts by this user
+    const { data: attempts } = await supabase
+      .from('test_attempts')
+      .select('test_id')
+      .eq('user_id', userId);
+      
+    const attemptedTestIds = attempts ? attempts.map(attempt => attempt.test_id) : [];
+    
+    // Find the first test that hasn't been attempted
+    const nextTest = tests.find(test => !attemptedTestIds.includes(test.id));
+    
+    return nextTest as Tables<'tests'> | null;
+  } catch (error) {
+    console.error('Error getting next available test:', error);
+    return null;
+  }
+};
+
 export const getTestById = async (id: string) => {
   const { data, error } = await supabase
     .from('tests')

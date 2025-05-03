@@ -14,6 +14,7 @@ import Register from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import StudentDashboard from "./pages/dashboard/StudentDashboard";
 import TestInterface from "./pages/test/TestInterface";
+import TestCatalog from "./pages/test/TestCatalog";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,12 @@ const App = () => (
                 <Route path="bahasa" element={<StudentDashboard subject="bahasa" />} />
                 <Route path="mandarin" element={<StudentDashboard subject="mandarin" />} />
                 <Route path="notes" element={<StudentDashboard subject="notes" />} />
+              </Route>
+              
+              {/* Test catalog and specific subject/skill routes */}
+              <Route path="tests" element={<DashboardLayout />}>
+                <Route index element={<TestCatalog />} />
+                <Route path=":subject/:skill" element={<TestCatalog />} />
               </Route>
               
               <Route path="test/:testId" element={<TestInterface />} />
