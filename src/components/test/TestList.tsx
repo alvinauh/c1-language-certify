@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { fetchTests, hasCompletedAllTests } from "@/services/supabaseService";
 import { generateTest } from "@/services/openai";
 import { Tables } from "@/types/database";
+import { toast } from "@/components/ui/use-toast";
 import TestGenerator from "./TestGenerator";
 
 interface TestListProps {
@@ -20,10 +21,12 @@ const TestList = ({ subject, skill, cefrLevel, userId }: TestListProps) => {
   const [tests, setTests] = useState<Tables<'tests'>[]>([]);
   const [loading, setLoading] = useState(true);
   const [allCompleted, setAllCompleted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadTests = async () => {
       setLoading(true);
+      setError(null);
       try {
         const testsData = await fetchTests(subject);
         setTests(testsData.filter(test => test.skill === skill));
@@ -32,8 +35,17 @@ const TestList = ({ subject, skill, cefrLevel, userId }: TestListProps) => {
           const completed = await hasCompletedAllTests(userId, subject, skill);
           setAllCompleted(completed);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error loading tests:", error);
+        
+        // Check if it's a missing table error
+        if (error.message?.includes("relation") && error.message?.includes("does not exist")) {
+          setError("Database tables not yet created. Please initialize the database or generate the first test.");
+        } else {
+          setError("Failed to load tests. Please try again later.");
+        }
+        
+        setTests([]);
       } finally {
         setLoading(false);
       }
@@ -43,14 +55,31 @@ const TestList = ({ subject, skill, cefrLevel, userId }: TestListProps) => {
   }, [subject, skill, userId]);
 
   const handleNoTestsAvailable = async () => {
-    if (!userId) return;
+    if (!userId) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to generate a test",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setLoading(true);
+    setError(null);
     try {
       const newTest = await generateTest(cefrLevel, skill, subject as any, 5, userId);
       setTests(prev => [newTest, ...prev]);
+      toast({
+        title: "Test Generated",
+        description: "Your new test has been created successfully",
+      });
     } catch (error) {
       console.error("Error generating initial test:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate test. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -61,6 +90,22 @@ const TestList = ({ subject, skill, cefrLevel, userId }: TestListProps) => {
       <div className="flex justify-center items-center p-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="shadow-md mb-6">
+        <CardHeader>
+          <CardTitle>Error Loading Tests</CardTitle>
+          <CardDescription>{error}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={handleNoTestsAvailable}>
+            Generate First Test
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 

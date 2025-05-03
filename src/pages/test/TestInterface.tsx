@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,8 @@ import { toast } from "@/components/ui/use-toast";
 import { getTestById, createTestAttempt, saveTestAnswers } from "@/services/supabaseService";
 import { generateFeedback } from "@/services/openai";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const TestInterface = () => {
   const { testId } = useParams();
@@ -24,7 +25,19 @@ const TestInterface = () => {
   const { data: test, isLoading, error } = useQuery({
     queryKey: ['test', testId],
     queryFn: () => testId ? getTestById(testId) : Promise.reject('No test ID provided'),
-    enabled: !!testId
+    enabled: !!testId,
+    retry: 1, // Only retry once to avoid too many failed requests
+    onError: (error: any) => {
+      console.error("Error fetching test:", error);
+      // Show toast for database table issues
+      if (error.message?.includes("relation") && error.message?.includes("does not exist")) {
+        toast({
+          title: "Database Error",
+          description: "The tests database has not been initialized yet. Please generate tests first.",
+          variant: "destructive",
+        });
+      }
+    }
   });
   
   // Create test attempt when the test loads
@@ -106,18 +119,45 @@ const TestInterface = () => {
   
   // Loading state
   if (isLoading) {
-    return <div className="flex justify-center items-center h-screen">Loading test...</div>;
+    return (
+      <div className="flex flex-col justify-center items-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p>Loading test...</p>
+      </div>
+    );
   }
   
   // Error state
   if (error || !test) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    const isDatabaseTableMissing = typeof errorMessage === 'string' && 
+      (errorMessage.includes("relation") && errorMessage.includes("does not exist"));
+    
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-red-500">Error Loading Test</h1>
-        <p>Unable to load test. Please try again later.</p>
-        <Button onClick={() => navigate("/dashboard")} className="mt-4">
-          Return to Dashboard
-        </Button>
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error Loading Test</AlertTitle>
+              <AlertDescription>
+                {isDatabaseTableMissing ? 
+                  "The tests database has not been set up yet. Please go to the test catalog and generate your first test." :
+                  "Unable to load test. Please try again later."}
+              </AlertDescription>
+            </Alert>
+            
+            <div className="flex flex-col space-y-4">
+              <Button onClick={() => navigate("/dashboard")}>
+                Return to Dashboard
+              </Button>
+              
+              <Button onClick={() => navigate("/tests")} variant="outline">
+                Go to Test Catalog
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
